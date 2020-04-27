@@ -1,20 +1,11 @@
-import minilog from "minilog";
 import { isClient } from "./is-client";
+import { createLogger, format, transports } from "winston";
 const rollbar = require("rollbar");
 let logInstance = null;
 
-if (isClient()) {
-  minilog.enable();
-  logInstance = minilog("client");
-  const existingErrorLogger = logInstance.error;
-  logInstance.error = (...err) => {
-    const errObj = err;
-    if (window.Rollbar) {
-      window.Rollbar.error(...errObj);
-    }
-    existingErrorLogger.call(...errObj);
-  };
-} else {
+let log;
+
+if (!isClient()) {
   let enableRollbar = false;
   if (
     process.env.NODE_ENV === "production" &&
@@ -24,17 +15,19 @@ if (isClient()) {
     rollbar.init(process.env.ROLLBAR_ACCESS_TOKEN);
   }
 
-  minilog.suggest.deny(
-    /.*/,
-    process.env.NODE_ENV === "development" ? "debug" : "debug"
-  );
+  logInstance = createLogger({
+    level: "info",
+    format: format.combine(
+      format.timestamp({
+        format: "YYYY-MM-DD HH:mm:ss"
+      }),
+      format.errors({ stack: true }),
+      format.splat(),
+      format.json()
+    ),
+    transports: [new transports.Console()]
+  });
 
-  minilog
-    .enable()
-    .pipe(minilog.backends.console.formatWithStack)
-    .pipe(minilog.backends.console);
-
-  logInstance = minilog("backend");
   const existingErrorLogger = logInstance.error;
   logInstance.error = err => {
     if (enableRollbar) {
@@ -49,6 +42,7 @@ if (isClient()) {
 
     existingErrorLogger(err && err.stack ? err.stack : err);
   };
+} else {
 }
 
 const log = process.env.LAMBDA_DEBUG_LOG ? console : logInstance;
