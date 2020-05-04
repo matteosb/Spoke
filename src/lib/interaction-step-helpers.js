@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 export function findParent(interactionStep, allInteractionSteps, isModel) {
   let parent = null;
   allInteractionSteps.forEach(step => {
@@ -78,10 +80,12 @@ export function sortInteractionSteps(interactionSteps) {
   const pathTree = getInteractionTree(interactionSteps);
   const orderedSteps = [];
   Object.keys(pathTree).forEach(key => {
-    const orderedBranch = pathTree[key].sort(
-      (a, b) =>
-        JSON.stringify(a.interactionStep) < JSON.stringify(b.interactionStep)
-    );
+    const orderedBranch = pathTree[key]
+      .slice(0)
+      .sort(
+        (a, b) =>
+          JSON.stringify(a.interactionStep) < JSON.stringify(b.interactionStep)
+      );
     orderedBranch.forEach(ele => orderedSteps.push(ele.interactionStep));
   });
   return orderedSteps;
@@ -92,12 +96,16 @@ export function getTopMostParent(interactionSteps, isModel) {
 }
 
 export function makeTree(interactionSteps, id = null) {
-  const root = interactionSteps.filter(is =>
-    id ? is.id === id : is.parentInteractionId === null
-  )[0];
-  const children = interactionSteps.filter(
-    is => is.parentInteractionId === root.id
+  const root = _.omit(
+    interactionSteps.filter(is =>
+      id ? is.id === id : is.parentInteractionId === null
+    )[0],
+    "__typename"
   );
+
+  const children = interactionSteps
+    .filter(is => is.parentInteractionId === root.id)
+    .map(is => _.omit(is, "__typename"));
   return {
     ...root,
     interactionSteps: children.map(c => {

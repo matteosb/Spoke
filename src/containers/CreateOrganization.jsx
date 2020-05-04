@@ -123,7 +123,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
     variables: {
       inviteId: ownProps.params.inviteId
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   },
   userData: {
     query: gql`
@@ -133,7 +133,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
         }
       }
     `,
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

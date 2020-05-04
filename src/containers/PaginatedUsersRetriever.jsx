@@ -96,7 +96,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
       campaignsFilter: ownProps.campaignsFilter,
       sortBy: ownProps.sortBy || "FIRST_NAME"
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

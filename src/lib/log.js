@@ -4,16 +4,17 @@ const rollbar = require("rollbar");
 let logInstance = null;
 
 if (isClient()) {
-  minilog.enable();
-  logInstance = minilog("client");
-  const existingErrorLogger = logInstance.error;
-  logInstance.error = (...err) => {
-    const errObj = err;
-    if (window.Rollbar) {
-      window.Rollbar.error(...errObj);
-    }
-    existingErrorLogger.call(...errObj);
-  };
+  logInstance = console;
+  // minilog.enable();
+  // logInstance = minilog("client");
+  // const existingErrorLogger = logInstance.error;
+  // logInstance.error = (...err) => {
+  //   const errObj = err;
+  //   if (window.Rollbar) {
+  //     window.Rollbar.error(...errObj);
+  //   }
+  //   existingErrorLogger.call(...errObj);
+  // };
 } else {
   let enableRollbar = false;
   if (

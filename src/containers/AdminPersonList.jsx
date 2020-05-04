@@ -375,7 +375,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
     variables: {
       organizationId: ownProps.params.organizationId
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   },
   organizationData: {
     query: gql`
@@ -397,7 +397,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
     variables: {
       organizationId: ownProps.params.organizationId
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

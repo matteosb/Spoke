@@ -30,7 +30,7 @@ describe("End-to-end campaign flow", () => {
       .contains("1")
       .click();
     // wait for modal to get dismissed, see if there is a better way to do this
-    cy.wait(200);
+    cy.wait(500);
     cy.get("[data-test=campaignBasicsForm]").submit();
 
     // Upload Contacts

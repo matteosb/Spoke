@@ -338,7 +338,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
       assignmentsFilter: ownProps.assignmentsFilter,
       utc: ownProps.utc
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

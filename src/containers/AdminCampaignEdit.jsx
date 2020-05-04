@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import React from "react";
+import _ from "lodash";
 
 import WarningIcon from "material-ui/svg-icons/alert/warning";
 import DoneIcon from "material-ui/svg-icons/action/done";
@@ -14,7 +15,6 @@ import loadData from "./hoc/load-data";
 import wrapMutations from "./hoc/wrap-mutations";
 import RaisedButton from "material-ui/RaisedButton";
 import CampaignBasicsForm from "../components/CampaignBasicsForm";
-//import CampaignContactsForm from "../components/CampaignContactsForm";
 import CampaignContactsChoiceForm from "../components/CampaignContactsChoiceForm";
 import CampaignTextersForm from "../components/CampaignTextersForm";
 import CampaignInteractionStepsForm from "../components/CampaignInteractionStepsForm";
@@ -208,8 +208,7 @@ class AdminCampaignEdit extends React.Component {
         !this.isNew()
           ? null
           : this.state.expandedSection + 1
-    }); // currently throws an unmounted component error in the console
-    this.props.campaignData.refetch();
+    });
   };
 
   handleSave = async () => {
@@ -247,11 +246,17 @@ class AdminCampaignEdit extends React.Component {
           newCampaign.interactionSteps
         );
       }
+      if (newCampaign.hasOwnProperty("cannedResponses")) {
+        newCampaign.cannedResponses = newCampaign.cannedResponses.map(cr =>
+          _.omit(cr, "__typename")
+        );
+      }
       await this.props.mutations.editCampaign(
         this.props.campaignData.campaign.id,
         newCampaign
       );
 
+      console.log("(((PENDING JOBS", this.props.pendingJobsData);
       this.pollDuringActiveJobs();
     }
   };
@@ -267,6 +272,32 @@ class AdminCampaignEdit extends React.Component {
     }
     this.props.campaignData.refetch();
   }
+  // async pollDuringActiveJobs() {
+  //   this.props.pendingJobsData
+  //
+  //   const pendingJobs = response.data.campaign.pendingJobs;
+  //   if (pendingJobs.length) {
+  //     const self = this;
+  //     setTimeout(() => {
+  //       // run it once more after there are no more jobs
+  //       self.pollDuringActiveJobs();
+  //     }, 1000);
+  //   } else {
+  //     await this.props.campaignData.refetch();
+  //   }
+  // }
+  //
+  // async pollDuringActiveJobs(noMore) {
+  //   const pendingJobs = await this.props.pendingJobsData.refetch();
+  //   if (pendingJobs.length && !noMore) {
+  //     const self = this;
+  //     setTimeout(() => {
+  //       // run it once more after there are no more jobs
+  //       self.pollDuringActiveJobs(true);
+  //     }, 1000);
+  //   }
+  //   this.props.campaignData.refetch();
+  // }
 
   checkSectionSaved(section) {
     // Tests section's keys of campaignFormValues against props.campaignData
@@ -763,7 +794,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
     variables: {
       organizationId: ownProps.params.organizationId
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

@@ -1,21 +1,43 @@
 import React from "react";
 import { connect } from "react-apollo";
 import LoadingIndicator from "../../components/LoadingIndicator";
-import { log } from "../../lib";
 
-const loadData = (Component, connectArgs) => {
+const loadData = (Component, connectArgs, { showTraceLog = false } = {}) => {
+  function traceLog(...args) {
+    if (showTraceLog) {
+      console.log(...args);
+    }
+  }
+
   class LoadData extends React.Component {
-    state = {
-      data: null
-    };
+    constructor(props) {
+      super(props);
+      traceLog("CONSTRUCTOR", this.dataProps(props));
+
+      const isLoading = this.isLoading(props);
+      this.state = {
+        isLoading,
+        lastReceivedData: isLoading ? {} : this.dataProps(props)
+      };
+    }
 
     // This ensures that the loading
     // indicator only shows on the first
     // load and not when refetch is called
     componentWillReceiveProps(props) {
-      if (!this.isLoading(props) || this.state.data !== null) {
+      traceLog("PROPS", this.dataProps(props));
+
+      const isLoading = this.isLoading(props);
+
+      if (this.state.isLoading && !isLoading) {
         this.setState({
-          data: this.dataProps(props)
+          isLoading: false
+        });
+      }
+
+      if (!isLoading) {
+        this.setState({
+          lastReceivedData: this.dataProps(props)
         });
       }
     }
@@ -33,6 +55,7 @@ const loadData = (Component, connectArgs) => {
           newProps[propName] = prop;
         }
       });
+      traceLog(props, newProps);
       return newProps;
     }
 
@@ -50,13 +73,17 @@ const loadData = (Component, connectArgs) => {
       const dataProps = this.dataProps(this.props);
       Object.keys(dataProps).forEach(prop => {
         if (dataProps[prop].errors) {
-          log.error("ERROR IN REQUEST", dataProps[prop].errors);
+          console.error("ERROR IN REQUEST", dataProps[prop].errors);
         }
       });
-      if (this.isLoading(this.props) && this.state.data === null) {
+
+      if (this.state.isLoading) {
+        traceLog("LOADING");
         return <LoadingIndicator />;
       }
-      return <Component {...this.props} {...this.state.data} />;
+
+      traceLog("RENDERING", this.props, this.state.lastReceivedData);
+      return <Component {...this.props} {...this.state.lastReceivedData} />;
     }
   }
 

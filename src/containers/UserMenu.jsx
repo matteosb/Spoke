@@ -171,7 +171,7 @@ export const dataQuery = gql`
 const mapQueriesToProps = () => ({
   data: {
     query: dataQuery,
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 

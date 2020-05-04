@@ -258,7 +258,7 @@ const mapQueriesToProps = ({ ownProps }) => ({
       organizationId: ownProps.organizationId,
       campaignsFilter: ownProps.campaignsFilter
     },
-    forceFetch: true
+    fetchPolicy: "network-only"
   }
 });
 
