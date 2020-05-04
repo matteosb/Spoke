@@ -149,6 +149,22 @@ class AdminCampaignEdit extends React.Component {
       });
     }
 
+    // WIP: Start polling if we have new pending jobs, stop when they go away
+    // NOTE! This doesn't work consistently. It appears that apollo-client 1.x
+    // and react-apollo 0.3 are somewhat incompatible. `refetch`, `startPolling`
+    // and `stopPolling` all fail with this issue:
+    // https://github.com/apollographql/react-apollo/issues/362
+    // Without refetch, it's not possible to match the previous campaign edit experience
+    const pendingJobs = this.props.pendingJobsData.campaign.pendingJobs;
+    const newPendingJobs = newProps.pendingJobsData.campaign.pendingJobs;
+    if (pendingJobs.length === 0 && newPendingJobs.length > 0) {
+      this.props.pendingJobsData.startPolling(1000);
+    }
+    if (pendingJobs.length > 0 && newPendingJobs.length === 0) {
+      this.props.pendingJobsData.stopPolling();
+      this.props.campaignData.refetch();
+    }
+
     this.setState({
       campaignFormValues: pushToFormValues
     });
@@ -185,7 +201,6 @@ class AdminCampaignEdit extends React.Component {
       )
     ) {
       await this.props.mutations.deleteJob(jobId);
-      await this.props.pendingJobsData.refetch();
     }
   }
 
@@ -255,49 +270,8 @@ class AdminCampaignEdit extends React.Component {
         this.props.campaignData.campaign.id,
         newCampaign
       );
-
-      console.log("(((PENDING JOBS", this.props.pendingJobsData);
-      this.pollDuringActiveJobs();
     }
   };
-
-  async pollDuringActiveJobs(noMore) {
-    const pendingJobs = await this.props.pendingJobsData.refetch();
-    if (pendingJobs.length && !noMore) {
-      const self = this;
-      setTimeout(() => {
-        // run it once more after there are no more jobs
-        self.pollDuringActiveJobs(true);
-      }, 1000);
-    }
-    this.props.campaignData.refetch();
-  }
-  // async pollDuringActiveJobs() {
-  //   this.props.pendingJobsData
-  //
-  //   const pendingJobs = response.data.campaign.pendingJobs;
-  //   if (pendingJobs.length) {
-  //     const self = this;
-  //     setTimeout(() => {
-  //       // run it once more after there are no more jobs
-  //       self.pollDuringActiveJobs();
-  //     }, 1000);
-  //   } else {
-  //     await this.props.campaignData.refetch();
-  //   }
-  // }
-  //
-  // async pollDuringActiveJobs(noMore) {
-  //   const pendingJobs = await this.props.pendingJobsData.refetch();
-  //   if (pendingJobs.length && !noMore) {
-  //     const self = this;
-  //     setTimeout(() => {
-  //       // run it once more after there are no more jobs
-  //       self.pollDuringActiveJobs(true);
-  //     }, 1000);
-  //   }
-  //   this.props.campaignData.refetch();
-  // }
 
   checkSectionSaved(section) {
     // Tests section's keys of campaignFormValues against props.campaignData
@@ -325,6 +299,7 @@ class AdminCampaignEdit extends React.Component {
   }
 
   sections() {
+    const pendingJobs = this.props.pendingJobsData.campaign.pendingJobs;
     const finalSections = [
       {
         title: "Basics",
@@ -363,7 +338,7 @@ class AdminCampaignEdit extends React.Component {
             this.props.campaignData.campaign.ingestMethod || null,
           jobResultMessage:
             (
-              this.props.pendingJobsData.campaign.pendingJobs
+              pendingJobs
                 .filter(job => /ingest/.test(job.jobType))
                 .reverse()[0] || {}
             ).resultMessage || ""
@@ -436,6 +411,7 @@ class AdminCampaignEdit extends React.Component {
       }
     ];
     if (window.CAN_GOOGLE_IMPORT) {
+      // TODO: consider merging this component into Interactions
       finalSections.push({
         title: "Script Import",
         content: AdminScriptImport,
@@ -445,7 +421,12 @@ class AdminCampaignEdit extends React.Component {
         expandAfterCampaignStarts: false,
         expandableBySuperVolunteers: false,
         extraProps: {
-          campaignData: this.props.campaignData
+          startImport: async url =>
+            this.props.mutations.importCampaignScript(
+              this.props.campaignData.campaign.id,
+              url
+            ),
+          hasPendingJob: pendingJobs.some(j => j.jobType === "import_script")
         },
         doNotSaveAfterSubmit: true
       });
@@ -469,9 +450,9 @@ class AdminCampaignEdit extends React.Component {
         relatedJob = pendingJobs.filter(
           job => job.jobType === "assign_texters"
         )[0];
-      } else if (section.title === "Interactions") {
+      } else if (section.title === "Script Import") {
         relatedJob = pendingJobs.filter(
-          job => job.jobType === "create_interaction_steps"
+          job => job.jobType === "import_script"
         )[0];
       }
     }
@@ -636,9 +617,11 @@ class AdminCampaignEdit extends React.Component {
       </div>
     );
   }
+
   render() {
     const sections = this.sections();
     const { expandedSection } = this.state;
+
     const { adminPerms } = this.props.params;
     return (
       <div>
@@ -835,7 +818,8 @@ const mapMutationsToProps = ({ ownProps }) => ({
     variables: {
       campaignId,
       campaign
-    }
+    },
+    refetchQueries: ["getCampaignJobs"]
   }),
   deleteJob: jobId => ({
     mutation: gql`
@@ -848,7 +832,20 @@ const mapMutationsToProps = ({ ownProps }) => ({
     variables: {
       campaignId: ownProps.params.campaignId,
       id: jobId
-    }
+    },
+    refetchQueries: ["getCampaignJobs"]
+  }),
+  importCampaignScript: (campaignId, url) => ({
+    mutation: gql`
+      mutation importCampaignScript($campaignId: String!, $url: String!) {
+        importCampaignScript(campaignId: $campaignId, url: $url)
+      }
+    `,
+    variables: {
+      campaignId,
+      url
+    },
+    refetchQueries: ["getCampaignJobs", "getCampaign"]
   })
 });
 
