@@ -36,4 +36,9 @@ const ApolloClientSingleton = new ApolloClient({
   networkInterface
 });
 
+// For debugging
+if (typeof window !== "undefined") {
+  window.ApolloClient = ApolloClientSingleton;
+}
+
 export default ApolloClientSingleton;
